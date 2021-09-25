@@ -23,6 +23,7 @@ const CreateForm = ({ onHandleCreate }) => {
         <div>
           title
           <input
+            id='title'
             type='text'
             value={title}
             name='title'
@@ -32,6 +33,7 @@ const CreateForm = ({ onHandleCreate }) => {
         <div>
           author
           <input
+            id='author'
             type='text'
             value={author}
             name='author'
@@ -41,6 +43,7 @@ const CreateForm = ({ onHandleCreate }) => {
         <div>
           url
           <input
+            id='url'
             type='text'
             value={url}
             name='url'
