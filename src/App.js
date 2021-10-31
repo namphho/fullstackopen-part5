@@ -3,18 +3,29 @@ import Blog from './components/Blog'
 import CreateForm from './components/CreateForm'
 import Notification from './components/Notification'
 import Togglable from './components/Togglable'
-import blogService from './services/blogs'
-import loginService from './services/login'
+import { useSelector, useDispatch } from 'react-redux'
+import { login, logout, initUser } from './reducers/loginReducer'
+import {
+  getAllBlogs,
+  deleteBlog,
+  createBlog,
+  likeBlog,
+} from './reducers/blogReducer'
+import { getAllUser } from './reducers/userReducer'
+import UserView from './components/UserView'
 
 const App = () => {
-  const [blogs, setBlogs] = useState([])
-  const [user, setUser] = useState(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [notiBundle, setNotifiBundle] = useState({
-    msg: null,
-    isError: null,
+  const user = useSelector((state) => state.login)
+  const blogs = useSelector((state) => {
+    return state.blogs
   })
+  const notiBundle = useSelector((state) => {
+    return state.notification
+  })
+
+  const dispatch = useDispatch()
 
   useEffect(() => {
     if (user !== null) {
@@ -22,72 +33,32 @@ const App = () => {
     }
   }, [user])
 
-  const loadBlog = async () => {
-    const blogs = await blogService.getAll()
-    setBlogs(sortBlog(blogs))
+  const loadBlog = () => {
+    dispatch(getAllBlogs())
   }
 
   useEffect(() => {
-    const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser')
-    if (loggedUserJSON) {
-      const user = JSON.parse(loggedUserJSON)
-      setUser(user)
-      blogService.setToken(user.token)
-    }
+    dispatch(initUser())
+    dispatch(getAllUser())
   }, [])
 
-  const handleLogin = async (event) => {
+  const handleLogin = (event) => {
     event.preventDefault()
-    try {
-      const user = await loginService.login({ username, password })
-      window.localStorage.setItem('loggedBlogAppUser', JSON.stringify(user))
-      blogService.setToken(user.token)
-      setUser(user)
-      setUsername('')
-      setPassword('')
-    } catch (e) {
-      alert(e)
-      showNotificationMsg('wrong username or password', true)
-    }
+    dispatch(login({ username, password }))
+    setUsername('')
+    setPassword('')
   }
 
   const onLogoutClick = () => {
-    window.localStorage.removeItem('loggedBlogAppUser')
-    setUser(null)
+    dispatch(logout())
   }
 
   const onCreateBlog = async (blog) => {
-    const createdBlog = await blogService.createBlog(blog)
-    const newBlogs = blogs.concat(createdBlog)
-    setBlogs(newBlogs)
-    showNotificationMsg(
-      `a new blog ${createdBlog.title} by ${createdBlog.author}`,
-      false
-    )
-  }
-
-  const showNotificationMsg = (msg, isError) => {
-    setNotifiBundle({ msg, isError })
-    setTimeout(() => {
-      setNotifiBundle({ msg: null, isError: null })
-    }, 3000)
+    dispatch(createBlog(blog))
   }
 
   const handleLike = async (blog) => {
-    try {
-      const updateBlog = await blogService.likeBlog(blog)
-      console.log(updateBlog)
-      const updateBlogs = blogs.map((b) => {
-        if (b.id === blog.id) {
-          return updateBlog
-        } else {
-          return b
-        }
-      })
-      setBlogs(sortBlog(updateBlogs))
-    } catch (e) {
-      alert(e)
-    }
+    dispatch(likeBlog(blog))
   }
 
   const handleRemove = async (blog) => {
@@ -95,18 +66,8 @@ const App = () => {
       `Remove blog ${blog.title} by ${blog.author}`
     )
     if (selected) {
-      try {
-        await blogService.deleteBlog(blog)
-        const afterBlogs = blogs.filter((b) => b.id !== blog.id)
-        setBlogs(afterBlogs)
-      } catch (e) {
-        showNotificationMsg(e.message, true)
-      }
+      dispatch(deleteBlog(blog))
     }
-  }
-
-  const sortBlog = (blogs) => {
-    return blogs.sort((x, y) => y.likes - x.likes)
   }
 
   if (user === null) {
@@ -157,6 +118,7 @@ const App = () => {
       </Togglable>
       <br></br>
       <br></br>
+      <UserView />
       <>
         {blogs.map((blog) => (
           <Blog
